@@ -10,9 +10,11 @@
 #import <pthread.h>
 #import <libkern/OSAtomic.h>
 #import <QuartzCore/QuartzCore.h>
+#import <os/lock.h>
 
 typedef NS_ENUM(NSUInteger, LockType) {
     LockTypeOSSpinLock = 0,
+    LockTypeos_unfair_lock,
     LockTypedispatch_semaphore,
     LockTypepthread_mutex,
     LockTypeNSCondition,
@@ -66,6 +68,7 @@ int TimeCount = 0;
 
 - (IBAction)log:(id)sender {
     printf("OSSpinLock:               %8.2f ms\n", TimeCosts[LockTypeOSSpinLock] * 1000);
+    printf("os_unfair_lock:           %8.2f ms\n", TimeCosts[LockTypeos_unfair_lock] * 1000);
     printf("dispatch_semaphore:       %8.2f ms\n", TimeCosts[LockTypedispatch_semaphore] * 1000);
     printf("pthread_mutex:            %8.2f ms\n", TimeCosts[LockTypepthread_mutex] * 1000);
     printf("NSCondition:              %8.2f ms\n", TimeCosts[LockTypeNSCondition] * 1000);
@@ -92,6 +95,18 @@ int TimeCount = 0;
         end = CACurrentMediaTime();
         TimeCosts[LockTypeOSSpinLock] += end - begin;
         printf("OSSpinLock:               %8.2f ms\n", (end - begin) * 1000);
+    }
+    
+    {
+        os_unfair_lock_t lock = &(OS_UNFAIR_LOCK_INIT);
+        begin = CACurrentMediaTime();
+        for (int i = 0; i < count; i++) {
+            os_unfair_lock_lock(lock);
+            os_unfair_lock_unlock(lock);
+        }
+        end = CACurrentMediaTime();
+        TimeCosts[LockTypeos_unfair_lock] += end - begin;
+        printf("os_unfair_lock:           %8.2f ms\n", (end - begin) * 1000);
     }
     
     
